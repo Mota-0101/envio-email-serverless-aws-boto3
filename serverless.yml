@@ -1,0 +1,60 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: defaul
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: projeto
+
+provider:
+  name: aws
+  deploymentBucket:
+    name: envio-email-projetoii
+  runtime: python3.12
+  profile: default
+  region: us-east-1
+  stage: dev
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+          Resource:
+            - arn:aws:ses:${self:provider.region}:*:identity/*
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+          Resource:
+            - arn:aws:s3:::${self:custom.bucketName}/*
+        - Effect: Allow
+          Action:
+            - s3:ListBucket
+          Resource:
+            - arn:aws:s3:::${self:custom.bucketName}/
+
+functions:
+  envio_email:
+    handler: handler.envio_email
+    events:
+      - s3:
+          bucket: ${self:custom.bucketName}
+          event: s3:ObjectCreated:Put
+          rules:
+            - suffix: .csv
+
+custom:
+  bucketName: envio-email-projetoii
+  serverless-s3-cleaner:
+    prompt: false
+    buckets:
+      - ${self:custom.bucketName}
+
+plugins:
+  - serverless-s3-cleaner
+
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!package-lock.json'
+    - '!package.json'
+    - '!*.csv'
+    - '!README.md'
+    - '!env/**'
